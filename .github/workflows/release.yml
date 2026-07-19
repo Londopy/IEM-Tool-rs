@@ -107,6 +107,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
         with:
@@ -122,6 +125,35 @@ jobs:
           echo "----- SHA256SUMS.txt -----"
           cat SHA256SUMS.txt
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Extract changelog section with patchnotes
+        run: |
+          python -m pip install --upgrade pip
+          pip install patchnotes
+          TAG="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
+          VERSION="${TAG#v}"
+          : > changelog-section.md
+          if [ -f CHANGELOG.md ]; then
+            # Prefer the exact version for this tag; fall back to the latest entry.
+            if patchnotes CHANGELOG.md show "$VERSION" > changelog-section.md 2>/dev/null \
+               && [ -s changelog-section.md ]; then
+              echo "Using CHANGELOG entry for $VERSION"
+            elif patchnotes CHANGELOG.md latest > changelog-section.md 2>/dev/null \
+               && [ -s changelog-section.md ]; then
+              echo "::warning::No CHANGELOG entry for $VERSION - using the latest entry instead."
+            else
+              echo "::warning::patchnotes could not extract a changelog section."
+              : > changelog-section.md
+            fi
+          else
+            echo "::warning::No CHANGELOG.md found - release notes will omit the changelog."
+          fi
+          echo "----- changelog-section.md -----"; cat changelog-section.md || true
+
       - name: Assemble release notes
         run: |
           TAG="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
@@ -130,6 +162,14 @@ jobs:
             echo ""
             echo "Cross-platform desktop builds — **Windows**, **macOS (Intel + Apple Silicon)** and **Linux** — built with Tauri (Rust core)."
             echo ""
+            if [ -s changelog-section.md ]; then
+              echo "### What's changed"
+              echo ""
+              echo '```'
+              cat changelog-section.md
+              echo '```'
+              echo ""
+            fi
             echo "### Downloads"
             echo ""
             for f in release/*; do
