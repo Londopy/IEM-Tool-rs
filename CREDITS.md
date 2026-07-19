@@ -66,6 +66,9 @@ algorithms, correctness was verified against the original JavaScript (see
 - `iem-curve-converter` — reimplements the Curve Converter (raw `.txt`/`.csv`
   parsing, L/R averaging, name standardization). Reconstructed from the tool's
   documented behavior (the original was a compiled binary, not source).
+- All three utilities are built for every platform in CI and attached to each
+  release, replacing the original project's two prebuilt `.exe` tools with
+  binaries compiled from auditable source.
 - `iem-autoeq-to-graphiceq` — new: converts a standard ParametricEQ file
   (AutoEq `Preamp:` + `Filter N: ON PK …` format) into a GraphicEQ correction
   curve by evaluating the combined biquad response through `iem-core`. A generic

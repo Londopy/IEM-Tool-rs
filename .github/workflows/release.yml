@@ -80,15 +80,36 @@ jobs:
         working-directory: rust
         run: cargo tauri build ${{ matrix.args }}
 
-      - name: Collect installers
+      - name: Build command-line utilities
+        working-directory: rust
+        run: cargo build --release -p iem-utils ${{ matrix.args }}
+
+      - name: Collect installers and utilities
         shell: bash
         run: |
           mkdir -p dist
+
+          # Desktop installers
           find rust/target -path '*bundle*' -type f \( \
             -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
             -o -name '*.dmg' -o -name '*.app.tar.gz' \
             -o -name '*.msi' -o -name '*-setup.exe' \
           \) -exec cp {} dist/ \; || true
+
+          # Standalone utilities, suffixed per platform so they don't collide
+          # when every platform's artifacts are flattened into one release.
+          for tool in iem-manifest-generator iem-curve-converter iem-autoeq-to-graphiceq; do
+            src=$(find rust/target -type f \( -name "$tool" -o -name "$tool.exe" \) \
+                    -not -path '*/deps/*' -not -path '*/incremental/*' | head -1)
+            if [ -n "$src" ]; then
+              ext=""
+              case "$src" in *.exe) ext=".exe" ;; esac
+              cp "$src" "dist/${tool}-${{ matrix.name }}${ext}"
+            else
+              echo "::warning::utility '$tool' not found for ${{ matrix.name }}"
+            fi
+          done
+
           echo "Collected:"; ls -la dist
 
       - name: Upload build artifacts
@@ -168,8 +189,19 @@ jobs:
             fi
             echo "### Downloads"
             echo ""
+            echo "**Desktop app installers**"
+            echo ""
             for f in release/*; do
-              [ "$(basename "$f")" = "SHA256SUMS.txt" ] && continue
+              b="$(basename "$f")"
+              [ "$b" = "SHA256SUMS.txt" ] && continue
+              case "$b" in iem-manifest-generator*|iem-curve-converter*|iem-autoeq-to-graphiceq*) continue ;; esac
+              echo "- \`$b\`"
+            done
+            echo ""
+            echo "**Command-line utilities** (optional — library manifest, curve conversion, GraphicEQ export)"
+            echo ""
+            for f in release/iem-*; do
+              [ -e "$f" ] || continue
               echo "- \`$(basename "$f")\`"
             done
             echo ""

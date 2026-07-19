@@ -7,7 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2026-07-19
+## [1.2.0] - 2026-07-19
+
+Supersedes 1.0.0 and 1.1.0, which have been withdrawn — their installers bundled
+the upstream prebuilt `.exe` utilities described below.
+
+### Added
+- The command-line utilities (`iem-manifest-generator`, `iem-curve-converter`,
+  `iem-autoeq-to-graphiceq`) are now **built for every platform and attached to
+  each release**, so using them no longer requires a local Rust toolchain. They
+  are covered by the release SHA-256 checksums and the build-provenance
+  attestation, and release notes list them separately from the app installers.
+
+### Removed
+- **The two prebuilt Python utilities that shipped with the original project**
+  (`IEM Curve Converter.exe`, `IEM Manifest Generator.exe`). They were unsigned
+  and unauditable, added ~19 MB to every installer (they sat inside the bundled
+  frontend), and are fully replaced by the Rust equivalents above. They also
+  triggered antivirus heuristics: PyInstaller executables unpack an embedded
+  archive at runtime, which behaviour-based engines classify as a "dropper"
+  (3-4 of 70 engines flagged them, all machine-learning/heuristic detections
+  consistent with a PyInstaller false positive).
+
+## [1.1.0] - 2026-07-19 [YANKED]
+
+> Withdrawn: the published installers bundled the upstream prebuilt `.exe`
+> utilities. Superseded by 1.2.0.
 
 DSP engine improvements: a faster real-time path and a plotting fix, with the
 audio output unchanged bit-for-bit.
@@ -28,7 +53,10 @@ audio output unchanged bit-for-bit.
   testing all 95 filters on every sample: ~14.8x faster with nothing engaged,
   ~1.6x faster with 10 bands, and unchanged at full load. Output is bit-identical.
 
-## [1.0.0] - 2026-07-19
+## [1.0.0] - 2026-07-19 [YANKED]
+
+> Withdrawn: the published installers bundled the upstream prebuilt `.exe`
+> utilities. Superseded by 1.2.0.
 
 First release of the Rust port, built on the IEM Tool frontend by MyLittlePrimordia.
 
@@ -70,6 +98,5 @@ First release of the Rust port, built on the IEM Tool frontend by MyLittlePrimor
   is still reproduced faithfully in `get_biquad_magnitude` for plot parity, with
   `get_biquad_magnitude_rbj` available as the corrected variant.
 
-[Unreleased]: https://github.com/Londopy/IEM-Tool-rs/compare/v1.1.0...HEAD
-[1.1.0]: https://github.com/Londopy/IEM-Tool-rs/compare/v1.0.0...v1.1.0
-[1.0.0]: https://github.com/Londopy/IEM-Tool-rs/releases/tag/v1.0.0
+[Unreleased]: https://github.com/Londopy/IEM-Tool-rs/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/Londopy/IEM-Tool-rs/releases/tag/v1.2.0
