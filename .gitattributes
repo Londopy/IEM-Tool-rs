@@ -1,0 +1,25 @@
+# Normalize line endings by default.
+* text=auto
+
+# Keep measurement curves byte-identical across platforms so manifest.json
+# file sizes stay deterministic (they record byte length).
+app-files/data/**   -text
+app-files/manifest.json -text
+
+# Binaries — never touch.
+*.wasm  binary
+*.ico   binary
+*.icns  binary
+*.png   binary
+*.jpg   binary
+*.ttf   binary
+*.woff  binary
+*.woff2 binary
+*.zip   binary
+*.exe   binary
+*.dmg   binary
+*.AppImage binary
+
+# Scripts keep their platform-correct endings.
+*.sh   text eol=lf
+*.ps1  text eol=crlf

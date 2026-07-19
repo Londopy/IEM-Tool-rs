@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Test & lint (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+          targets: wasm32-unknown-unknown
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Format check
+        run: cargo fmt -p iem-core -p iem-utils --check
+
+      - name: Clippy (core + utils)
+        run: cargo clippy -p iem-core -p iem-utils --all-targets
+
+      - name: Run tests (core + utils)
+        run: cargo test -p iem-core -p iem-utils --release
+
+      - name: Build WebAssembly core
+        run: cargo rustc -p iem-core --release --target wasm32-unknown-unknown --crate-type cdylib
+
+      - name: Verify WASM exports
+        shell: bash
+        run: |
+          WASM=target/wasm32-unknown-unknown/release/iem_core.wasm
+          node -e '
+            const b = require("fs").readFileSync(process.argv[1]);
+            WebAssembly.compile(b).then(m => {
+              const ex = WebAssembly.Module.exports(m).map(x => x.name);
+              const need = ["memory","alloc","dealloc","engine_process","biquad_magnitude","autoeq_solve","cubic_spline","gaussian_smooth"];
+              const missing = need.filter(n => !ex.includes(n));
+              if (missing.length) { console.error("Missing WASM exports:", missing.join(", ")); process.exit(1); }
+              console.log("WASM exports OK (" + ex.length + " total)");
+            });
+          ' "$WASM"
+
+  utilities:
+    name: Utility binaries smoke test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+      - name: Build utilities
+        run: cargo build --release -p iem-utils
+      - name: Manifest generator round-trips a tiny library
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="$(mktemp -d)"
+          mkdir -p "$root/data/BRAND A" "$root/data/BRAND B"
+          printf '20 -1\n1000 0\n' > "$root/data/BRAND A/ALPHA.txt"
+          printf '20 -2\n1000 1\n' > "$root/data/BRAND B/ZED.txt"
+          ./target/release/iem-manifest-generator "$root"
+          test -f "$root/manifest.json"
+          grep -q 'data/BRAND A/ALPHA.txt' "$root/manifest.json"
+          echo "manifest generator OK"
+      - name: Curve converter averages an L/R pair
+        shell: bash
+        run: |
+          set -euo pipefail
+          raw="$(mktemp -d)"
+          printf '20 -10\n1000 4\n' > "$raw/DEMO IEM [1].txt"
+          printf '20 -8\n1000 6\n'  > "$raw/DEMO IEM [2].txt"
+          ./target/release/iem-curve-converter "$raw"
+          test -f "$raw/Converted/DEMO IEM.txt"
+          head -1 "$raw/Converted/DEMO IEM.txt" | grep -q '^20 -9'
+          echo "curve converter OK"
+      - name: ParametricEQ to GraphicEQ conversion
+        shell: bash
+        run: |
+          set -euo pipefail
+          peq="$(mktemp)"
+          printf 'Preamp: -6 dB\nFilter 1: ON PK Fc 1000 Hz Gain 6 dB Q 1.0\n' > "$peq"
+          out="$(./target/release/iem-autoeq-to-graphiceq "$peq" --points 32 2>/dev/null)"
+          echo "$out" | grep -q '^GraphicEQ: '
+          echo "graphiceq exporter OK"

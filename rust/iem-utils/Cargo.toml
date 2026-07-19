@@ -1,0 +1,25 @@
+[package]
+name = "iem-utils"
+version = "0.1.0"
+edition = "2021"
+description = "Native Rust utilities for IEM Tool: manifest generator, curve converter, and parametric-to-graphic EQ exporter."
+license = "MIT"
+
+[dependencies]
+iem-core = { path = "../iem-core" }
+
+[lib]
+name = "iem_utils"
+path = "src/lib.rs"
+
+[[bin]]
+name = "iem-manifest-generator"
+path = "src/bin/manifest_generator.rs"
+
+[[bin]]
+name = "iem-curve-converter"
+path = "src/bin/curve_converter.rs"
+
+[[bin]]
+name = "iem-autoeq-to-graphiceq"
+path = "src/bin/autoeq_to_graphiceq.rs"
