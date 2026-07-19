@@ -1,0 +1,164 @@
+name: Release
+
+# Builds the Tauri app for Windows, macOS (Intel + Apple Silicon) and Linux,
+# then publishes a GitHub Release whose description embeds SHA-256 checksums for
+# every artifact (the original project shipped none).
+
+on:
+  push:
+    tags: [ 'v*' ]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g. v1.0.0)'
+        required: true
+
+permissions:
+  contents: write
+  id-token: write      # for build provenance attestation
+  attestations: write  # for build provenance attestation
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            name: linux-x86_64
+            rust_target: ''
+            args: ''
+          - os: macos-13
+            name: macos-x86_64
+            rust_target: x86_64-apple-darwin
+            args: '--target x86_64-apple-darwin'
+          - os: macos-14
+            name: macos-aarch64
+            rust_target: aarch64-apple-darwin
+            args: '--target aarch64-apple-darwin'
+          - os: windows-latest
+            name: windows-x86_64
+            rust_target: x86_64-pc-windows-msvc
+            args: '--target x86_64-pc-windows-msvc'
+          - os: windows-latest
+            name: windows-i686-32bit
+            rust_target: i686-pc-windows-msvc
+            args: '--target i686-pc-windows-msvc'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract measurement database (data.zip)
+        shell: bash
+        run: |
+          cd app-files
+          if [ -f data.zip ] && [ ! -d data ]; then
+            unzip -q -o data.zip \
+              || 7z x -y data.zip >/dev/null \
+              || echo "::warning::Could not extract data.zip; app will build without the bundled library."
+          fi
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev \
+            patchelf libssl-dev build-essential curl wget file
+
+      - name: Cache cargo
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
+      - name: Install Tauri CLI
+        run: cargo install tauri-cli --version "^2" --locked
+
+      - name: Build Tauri app
+        working-directory: rust
+        run: cargo tauri build ${{ matrix.args }}
+
+      - name: Collect installers
+        shell: bash
+        run: |
+          mkdir -p dist
+          find rust/target -path '*bundle*' -type f \( \
+            -name '*.AppImage' -o -name '*.deb' -o -name '*.rpm' \
+            -o -name '*.dmg' -o -name '*.app.tar.gz' \
+            -o -name '*.msi' -o -name '*-setup.exe' \
+          \) -exec cp {} dist/ \; || true
+          echo "Collected:"; ls -la dist
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}
+          path: dist/*
+          if-no-files-found: warn
+
+  release:
+    name: Publish release with checksums
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten and compute SHA-256 checksums
+        run: |
+          mkdir -p release
+          find artifacts -type f -exec cp -n {} release/ \;
+          cd release
+          if [ -z "$(ls -A)" ]; then echo "No artifacts to release"; exit 1; fi
+          sha256sum * > SHA256SUMS.txt
+          echo "----- SHA256SUMS.txt -----"
+          cat SHA256SUMS.txt
+
+      - name: Assemble release notes
+        run: |
+          TAG="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
+          {
+            echo "## IEM Tool ${TAG}"
+            echo ""
+            echo "Cross-platform desktop builds — **Windows**, **macOS (Intel + Apple Silicon)** and **Linux** — built with Tauri (Rust core)."
+            echo ""
+            echo "### Downloads"
+            echo ""
+            for f in release/*; do
+              [ "$(basename "$f")" = "SHA256SUMS.txt" ] && continue
+              echo "- \`$(basename "$f")\`"
+            done
+            echo ""
+            echo "### SHA-256 checksums"
+            echo ""
+            echo "Verify with \`sha256sum -c SHA256SUMS.txt\` (or \`shasum -a 256\` on macOS)."
+            echo ""
+            echo '```'
+            cat release/SHA256SUMS.txt
+            echo '```'
+          } > notes.md
+          echo "----- notes.md -----"; cat notes.md
+
+      - name: Attest build provenance
+        continue-on-error: true  # never block a release if attestation is unavailable
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: 'release/*'
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
+          name: IEM Tool ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
+          body_path: notes.md
+          files: release/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,15 @@
+[package]
+name = "iem-core"
+version = "0.1.0"
+edition = "2021"
+description = "Rust core for IEM Tool: parametric EQ, biquad DSP, frequency-response analysis, curve utilities and AutoEQ solver."
+license = "MIT"
+
+[lib]
+crate-type = ["rlib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+panic = "abort"
+codegen-units = 1

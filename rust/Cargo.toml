@@ -1,0 +1,10 @@
+[workspace]
+resolver = "2"
+members = ["iem-core", "iem-utils", "src-tauri"]
+
+# Release tuning applies to every workspace member (incl. the wasm build of iem-core).
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

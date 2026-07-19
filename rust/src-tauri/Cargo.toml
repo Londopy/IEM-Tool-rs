@@ -1,0 +1,22 @@
+[package]
+name = "iem-tool"
+version = "1.0.0"
+edition = "2021"
+description = "IEM Tool — Parametric EQ & Frequency Response Analyzer (Tauri shell, Rust core)."
+authors = ["MyLittlePrimordia"]
+license = "MIT"
+
+[lib]
+name = "iem_tool_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+iem-core = { path = "../iem-core" }
+iem-utils = { path = "../iem-utils" }
