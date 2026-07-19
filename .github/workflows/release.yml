@@ -149,7 +149,7 @@ jobs:
 
       - name: Attest build provenance
         continue-on-error: true  # never block a release if attestation is unavailable
-        uses: actions/attest-build-provenance@v1
+        uses: actions/attest-build-provenance@v4
         with:
           subject-path: 'release/*'
 
