@@ -238,9 +238,11 @@ checksums. This fork replaces that with two workflows:
   generator round-trips a tiny library; curve converter averages an L/R pair).
 
 ### `release.yml` — on a `v*` tag (or manual dispatch)
-* Builds the **Tauri** app on a matrix of **Windows, macOS Intel (`macos-13`),
+* Builds the **Tauri** app on a matrix of **Windows (64- and 32-bit),
   macOS Apple Silicon (`macos-14`) and Linux**, extracting `data.zip` first so
-  the measurement library is bundled.
+  the measurement library is bundled. (Intel macOS is intentionally not built —
+  it roughly doubled the release time for a shrinking share of Macs. Add a
+  `macos-13` / `x86_64-apple-darwin` matrix row back if you ever want it.)
 * A final `release` job downloads every installer, computes **SHA-256
   checksums**, and publishes a GitHub Release whose description embeds a
   `SHA256SUMS.txt` table (verify with `sha256sum -c SHA256SUMS.txt`). The
@@ -281,7 +283,6 @@ normalization, clamping, and output formatting).
 |---|---|---|
 | Windows | x86_64 (64-bit) | `-setup.exe` (NSIS), `.msi` |
 | Windows | i686 (**32-bit**) | `-setup.exe` (NSIS), `.msi` |
-| macOS | x86_64 (Intel) | `.dmg`, `.app.tar.gz` |
 | macOS | aarch64 (Apple Silicon) | `.dmg`, `.app.tar.gz` |
 | Linux | x86_64 | `.AppImage`, `.deb` |
 

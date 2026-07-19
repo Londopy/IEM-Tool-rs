@@ -86,7 +86,7 @@ algorithms, correctness was verified against the original JavaScript (see
 - **CI** (`.github/workflows/ci.yml`) — fmt, clippy, tests, WASM build on
   Windows/macOS/Linux, plus utility smoke tests.
 - **Releases** (`.github/workflows/release.yml`) — Tauri builds for Windows
-  (64- & 32-bit), macOS (Intel & Apple Silicon) and Linux, with SHA-256
+  (64- & 32-bit), macOS (Apple Silicon) and Linux, with SHA-256
   checksums and build-provenance attestations.
 - Repo hygiene: `.gitignore`, `.gitattributes`, `dependabot.yml`.
 - Two latent bugs found and documented during the port (a high-shelf coefficient

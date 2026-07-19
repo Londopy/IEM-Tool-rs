@@ -1,6 +1,6 @@
 name: Release
 
-# Builds the Tauri app for Windows, macOS (Intel + Apple Silicon) and Linux,
+# Builds the Tauri app for Windows, macOS (Apple Silicon) and Linux,
 # then publishes a GitHub Release whose description embeds SHA-256 checksums for
 # every artifact (the original project shipped none).
 
@@ -30,10 +30,6 @@ jobs:
             name: linux-x86_64
             rust_target: ''
             args: ''
-          - os: macos-13
-            name: macos-x86_64
-            rust_target: x86_64-apple-darwin
-            args: '--target x86_64-apple-darwin'
           - os: macos-14
             name: macos-aarch64
             rust_target: aarch64-apple-darwin
@@ -160,7 +156,7 @@ jobs:
           {
             echo "## IEM Tool ${TAG}"
             echo ""
-            echo "Cross-platform desktop builds — **Windows**, **macOS (Intel + Apple Silicon)** and **Linux** — built with Tauri (Rust core)."
+            echo "Cross-platform desktop builds — **Windows**, **macOS (Apple Silicon)** and **Linux** — built with Tauri (Rust core)."
             echo ""
             if [ -s changelog-section.md ]; then
               echo "### What's changed"

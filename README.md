@@ -24,7 +24,7 @@
 | Parametric-to-GraphicEQ export | — | new **Rust** tool |
 | Desktop shell | Electron | **Tauri** (Rust) — smaller, faster, no bundled Chromium |
 | Tests | none | **29 Rust tests** in CI |
-| CI builds | macOS + Linux (Electron) | **Windows (64 + 32-bit), macOS (Intel + Apple Silicon), Linux** |
+| CI builds | macOS + Linux (Electron) | **Windows (64 + 32-bit), macOS (Apple Silicon), Linux** |
 | Release checksums | none | **SHA-256 + build provenance attestations** |
 
 The frontend and all its features (Rate & Review, 10-band EQ, AutoEQ, Find
@@ -60,7 +60,7 @@ Rust DSP core can be enabled inside it with `window.IEM_USE_RUST_DSP = true`.
 Release builds are produced by GitHub Actions for:
 
 - **Windows** — 64-bit (`x86_64`) and 32-bit (`i686`) — NSIS `.exe` + `.msi`
-- **macOS** — Intel (`x86_64`) and Apple Silicon (`aarch64`) — `.dmg`
+- **macOS** — Apple Silicon (`aarch64`) — `.dmg`
 - **Linux** — `x86_64` — `.AppImage` + `.deb`
 
 Each artifact ships with a SHA-256 checksum and a signed build-provenance

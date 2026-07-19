@@ -29,7 +29,7 @@ First release of the Rust port, built on the IEM Tool frontend by MyLittlePrimor
 - Tauri v2 desktop shell serving the existing frontend.
 - 29 Rust tests and a cross-platform CI workflow (Windows, macOS, Linux).
 - Release workflow producing installers for Windows (64- and 32-bit),
-  macOS (Intel and Apple Silicon) and Linux, each published with SHA-256
+  macOS (Apple Silicon) and Linux, each published with SHA-256
   checksums and a build-provenance attestation.
 - Optional helper scripts: `install.ps1` (checksum-verified download),
   `tools/build.ps1`, and `tools/Create-Shortcut.ps1`.
