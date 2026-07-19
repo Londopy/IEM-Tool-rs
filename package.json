@@ -1,7 +1,7 @@
 {
-  "name": "iem-tool",
-  "version": "1.0.0",
-  "description": "🎧 IEM Tool - Parametric EQ & Frequency Response Analyzer",
+  "name": "iem-tool-rs",
+  "version": "1.3.0",
+  "description": "🎧 IEM-Tool-rs - Parametric EQ & Frequency Response Analyzer (Rust core)",
   "main": "main.js",
   "author": "🍄 MyLittlePrimordia",
   "license": "MIT",
@@ -20,8 +20,8 @@
   },
 
   "build": {
-    "appId": "com.mylittleprimordia.iemtool",
-    "productName": "IEM Tool",
+    "appId": "com.londopy.iem-tool-rs",
+    "productName": "IEM-Tool-rs",
 
     "asar": false,
 
@@ -50,7 +50,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "IEM Tool"
+      "shortcutName": "IEM-Tool-rs"
     },
 
     "mac": {

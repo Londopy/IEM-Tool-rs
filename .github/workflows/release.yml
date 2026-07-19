@@ -76,6 +76,19 @@ jobs:
       - name: Install Tauri CLI
         run: cargo install tauri-cli --version "^2" --locked
 
+      - name: Set app version from the tag
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
+          VERSION="${TAG#v}"
+          BASE="${VERSION%%-*}"   # bundlers want a bare x.y.z
+          # Tauri takes the app version from tauri.conf.json, not the git tag,
+          # so patch it here to guarantee installers match the release.
+          sed -i.bak "s/\"version\": \"[^\"]*\"/\"version\": \"$BASE\"/" \
+            rust/src-tauri/tauri.conf.json && rm -f rust/src-tauri/tauri.conf.json.bak
+          echo "App version set to $BASE"
+          grep '"version"' rust/src-tauri/tauri.conf.json
+
       - name: Build Tauri app
         working-directory: rust
         run: cargo tauri build ${{ matrix.args }}
@@ -175,7 +188,7 @@ jobs:
         run: |
           TAG="${GITHUB_REF_NAME:-${{ github.event.inputs.tag }}}"
           {
-            echo "## IEM Tool ${TAG}"
+            echo "## IEM-Tool-rs ${TAG}"
             echo ""
             echo "Cross-platform desktop builds — **Windows**, **macOS (Apple Silicon)** and **Linux** — built with Tauri (Rust core)."
             echo ""
@@ -225,7 +238,7 @@ jobs:
         uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
-          name: IEM Tool ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
+          name: IEM-Tool-rs ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.tag }}
           body_path: notes.md
           files: release/*
         env:

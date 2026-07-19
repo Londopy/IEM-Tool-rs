@@ -2,7 +2,7 @@
 name = "iem-utils"
 version = "0.1.0"
 edition = "2021"
-description = "Native Rust utilities for IEM Tool: manifest generator, curve converter, and parametric-to-graphic EQ exporter."
+description = "Native Rust utilities for IEM-Tool-rs: manifest generator, curve converter, and parametric-to-graphic EQ exporter."
 license = "MIT"
 
 [dependencies]

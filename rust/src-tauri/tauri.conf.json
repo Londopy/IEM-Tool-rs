@@ -1,15 +1,15 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "IEM Tool",
-  "version": "1.0.0",
-  "identifier": "com.mylittleprimordia.iemtool",
+  "productName": "IEM-Tool-rs",
+  "version": "1.3.0",
+  "identifier": "com.londopy.iem-tool-rs",
   "build": {
     "frontendDist": "../../app-files"
   },
   "app": {
     "windows": [
       {
-        "title": "IEM Tool",
+        "title": "IEM-Tool-rs",
         "width": 1400,
         "height": 900,
         "minWidth": 360,

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-19
+
+Naming and versioning cleanup. No functional changes to the DSP or the app.
+
+### Changed
+- **Renamed the application to `IEM-Tool-rs` throughout** — product name, window
+  title, installer filenames, crate names, Electron `productName`/shortcut, and
+  the GitHub Release title. Installers are now `IEM-Tool-rs_<version>_…` with no
+  space in the filename. The bundle identifier also moved from
+  `com.mylittleprimordia.iemtool` to `com.londopy.iem-tool-rs`, since this is a
+  separate application from the upstream project; the Tauri crate's `authors`
+  was corrected to match. References to the *original* IEM Tool are unchanged.
+
+### Fixed
+- Installer filenames and the app's reported version were pinned at `1.0.0`
+  regardless of the release tag, because Tauri reads the version from
+  `tauri.conf.json` rather than from git. The release workflow now derives it
+  from the tag before building, so installers always match the release.
+
 ## [1.2.0] - 2026-07-19
 
 Supersedes 1.0.0 and 1.1.0, which have been withdrawn — their installers bundled
@@ -98,5 +117,6 @@ First release of the Rust port, built on the IEM Tool frontend by MyLittlePrimor
   is still reproduced faithfully in `get_biquad_magnitude` for plot parity, with
   `get_biquad_magnitude_rbj` available as the corrected variant.
 
-[Unreleased]: https://github.com/Londopy/IEM-Tool-rs/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/Londopy/IEM-Tool-rs/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/Londopy/IEM-Tool-rs/compare/v1.2.0...v1.3.0
 [1.2.0]: https://github.com/Londopy/IEM-Tool-rs/releases/tag/v1.2.0

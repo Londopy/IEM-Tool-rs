@@ -1,4 +1,4 @@
-//! iem-core — the computational core of IEM Tool, ported to Rust.
+//! iem-core — the computational core of IEM-Tool-rs, ported to Rust from IEM Tool.
 //!
 //! Builds two ways from one source:
 //!   * `cdylib` -> `wasm32-unknown-unknown` for the real-time AudioWorklet and

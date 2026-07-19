@@ -199,13 +199,13 @@ sha256sum -c SHA256SUMS.txt          # Linux
 shasum -a 256 -c SHA256SUMS.txt      # macOS
 ```
 ```powershell
-Get-FileHash .\IEM-Tool-rs_1.1.0_x64-setup.exe -Algorithm SHA256   # Windows
+Get-FileHash .\IEM-Tool-rs_1.3.0_x64-setup.exe -Algorithm SHA256   # Windows
 ```
 
 Provenance (proves the binary was built by this repo's workflow):
 
 ```bash
-gh attestation verify IEM-Tool-rs_1.1.0_x64-setup.exe -R Londopy/IEM-Tool-rs
+gh attestation verify IEM-Tool-rs_1.3.0_x64-setup.exe -R Londopy/IEM-Tool-rs
 ```
 
 ---

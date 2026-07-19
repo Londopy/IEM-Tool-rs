@@ -1,4 +1,4 @@
-//! IEM Tool — Tauri backend.
+//! IEM-Tool-rs — Tauri backend.
 //!
 //! Exposes the verified `iem-core` computational core and the `iem-utils`
 //! helper utilities to the (unchanged) HTML/CSS/JS frontend as Tauri commands.
@@ -163,5 +163,5 @@ pub fn run() {
             convert_curves
         ])
         .run(tauri::generate_context!())
-        .expect("error while running IEM Tool");
+        .expect("error while running IEM-Tool-rs");
 }

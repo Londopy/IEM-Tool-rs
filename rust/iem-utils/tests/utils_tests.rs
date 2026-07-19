@@ -1,4 +1,4 @@
-//! Integration tests for the IEM Tool utility crate (manifest + converter).
+//! Integration tests for the IEM-Tool-rs utility crate (manifest + converter).
 use iem_utils::*;
 use std::fs;
 

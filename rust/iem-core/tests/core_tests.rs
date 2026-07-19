@@ -1,4 +1,4 @@
-//! Integration tests for the IEM Tool Rust core. These run in CI via `cargo test`.
+//! Integration tests for the IEM-Tool-rs Rust core. These run in CI via `cargo test`.
 use iem_core::autoeq;
 use iem_core::biquad::{self, Biquad, FilterType};
 use iem_core::curves::{self, AlignMode};
