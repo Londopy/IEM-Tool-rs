@@ -119,13 +119,16 @@ fn eval(ftype: FilterType, f: f64, f0: f64, q: f64, g: f64, fs: f64, highshelf_r
     (num_mag2 / den_mag2.max(1e-12)).sqrt()
 }
 
-/// Faithful port of `getBiquadMagnitude` (linear magnitude).
+/// Frequency-response magnitude (linear), using the **corrected** RBJ
+/// high-shelf. This is the default because it matches what the audio engine
+/// actually renders - the original JS plotting routine disagreed with its own
+/// audio path for high shelves.
 #[inline]
 pub fn get_biquad_magnitude(ftype: FilterType, f: f64, f0: f64, q: f64, g: f64, fs: f64) -> f64 {
-    eval(ftype, f, f0, q, g, fs, false)
+    eval(ftype, f, f0, q, g, fs, true)
 }
 
-/// Same, but with the corrected RBJ high-shelf sign.
+/// Explicit alias for the corrected form (identical to `get_biquad_magnitude`).
 #[inline]
 pub fn get_biquad_magnitude_rbj(
     ftype: FilterType,
@@ -136,4 +139,19 @@ pub fn get_biquad_magnitude_rbj(
     fs: f64,
 ) -> f64 {
     eval(ftype, f, f0, q, g, fs, true)
+}
+
+/// Bug-for-bug port of the original `getBiquadMagnitude`, including its
+/// high-shelf `a1` sign quirk. Kept so the original plot can be reproduced
+/// exactly if ever needed; not used by default.
+#[inline]
+pub fn get_biquad_magnitude_legacy(
+    ftype: FilterType,
+    f: f64,
+    f0: f64,
+    q: f64,
+    g: f64,
+    fs: f64,
+) -> f64 {
+    eval(ftype, f, f0, q, g, fs, false)
 }

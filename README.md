@@ -23,7 +23,7 @@
 | Manifest generator & curve converter | Python `.exe` | **Rust** binaries |
 | Parametric-to-GraphicEQ export | — | new **Rust** tool |
 | Desktop shell | Electron | **Tauri** (Rust) — smaller, faster, no bundled Chromium |
-| Tests | none | **29 Rust tests** in CI |
+| Tests | none | **30 Rust tests** in CI |
 | CI builds | macOS + Linux (Electron) | **Windows (64 + 32-bit), macOS (Apple Silicon), Linux** |
 | Release checksums | none | **SHA-256 + build provenance attestations** |
 

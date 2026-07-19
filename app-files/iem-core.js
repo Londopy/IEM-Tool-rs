@@ -37,9 +37,16 @@ const IEMCore = (() => {
     TYPE,
     get exports() { return X; },
 
+    /** Magnitude using the corrected RBJ high-shelf (matches the audio engine). */
     biquadMagnitude(type, f, f0, q, g, fs) {
       const t = typeof type === 'string' ? (TYPE[type] ?? 0) : type;
       return X.biquad_magnitude(t, f, f0, q, g, fs);
+    },
+
+    /** The original routine's curve, including its high-shelf sign quirk. */
+    biquadMagnitudeLegacy(type, f, f0, q, g, fs) {
+      const t = typeof type === 'string' ? (TYPE[type] ?? 0) : type;
+      return X.biquad_magnitude_legacy(t, f, f0, q, g, fs);
     },
 
     /** bands: [{type,f0,q,g}], returns combined dB per target freq. */

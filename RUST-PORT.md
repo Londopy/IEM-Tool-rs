@@ -62,36 +62,85 @@ The **manifest generator** was validated by regenerating `manifest.json` from
 the full 10,615-file library: the file list is identical, and sizes match the
 committed manifest byte-for-byte on Windows (CRLF).
 
-### One bug found during the port
+### One bug found during the port — now fixed
 
 The JS plotting routine `getBiquadMagnitude` computes the **high-shelf `a1`**
 coefficient as `2*((A-1) + (A+1)*cosW0)`, but the RBJ cookbook and the actual
 audio path (`calculateCoefficients`) use `-`. So the *plotted* high-shelf curve
-doesn't quite match what you *hear*. The Rust port reproduces the original
-behaviour faithfully in `get_biquad_magnitude` (so plots are unchanged) and also
-provides `get_biquad_magnitude_rbj` with the corrected sign. Flip to the
-corrected version whenever you want plot and audio to agree.
+didn't match what you *heard*.
+
+The port initially reproduced this faithfully for plot parity. **As of the
+current version the corrected form is the default**: `get_biquad_magnitude` now
+uses the RBJ sign, so the graph agrees with the engine. A test evaluates the
+engine's own designed coefficients on the unit circle and asserts the plotted
+magnitude matches to 1e-9, so the two can't silently diverge again.
+
+The original curve is still available as `get_biquad_magnitude_legacy` (exported
+to WASM as `biquad_magnitude_legacy`, and as `IEMCore.biquadMagnitudeLegacy()`
+in the JS bridge) if you ever need to reproduce the old plot exactly.
+
+---
+
+## Performance
+
+The core ships a zero-dependency benchmark and an output-fingerprint tool:
+
+```powershell
+cd E:\Python\IEM-Tool\rust
+cargo run --release -p iem-core --example bench   # ns/frame + realtime factor
+cargo run --release -p iem-core --example dump    # FNV fingerprint of engine output
+```
+
+`dump` exists so refactors can be proven **bit-exact**: capture the fingerprints
+before a change and diff them after.
+
+The real-time loop originally tested the bypass flag of all 95 filters on every
+sample. It now walks only up to the highest active filter, so unused bands cost
+nothing. Measured on 128-frame blocks at 48 kHz:
+
+| Active filters | Before | After | Change |
+|---|---|---|---|
+| none (bypassed) | 31.1 ns/frame | **2.1 ns/frame** | **14.8x faster** |
+| 10 EQ bands | 72.9 ns/frame | **45.4 ns/frame** | **1.6x faster** |
+| 32 EQ bands | 143.5 ns/frame | 124.8 ns/frame | 1.15x faster |
+| 80 EQ (max) | 311.5 ns/frame | 304.7 ns/frame | parity |
+| 80 EQ + 15 sim + crossover | 378.2 ns/frame | 384.5 ns/frame | parity |
+
+Output is bit-identical before and after — verified with `dump` across all five
+configurations. Even at full load the engine runs ~48x faster than real time.
+
+> A filter-major variant (each filter processing the whole block) was tried
+> first: 9x faster when idle but ~36% *slower* at full load, because it loses
+> register residency and makes 80 passes over the block in memory. Sample-major
+> with a high-water mark won on both ends.
 
 ---
 
 ## Repository layout
 
 ```
-IEM-Tool/
-├── app-files/                     # unchanged frontend + new Rust glue
+IEM-Tool-rs/
+├── app-files/                     # unchanged frontend + Rust glue
 │   ├── index.html                 # 2 small, reversible edits (see below)
+│   ├── data/                      # measurement library (~10,600 curves)
 │   ├── dsp-processor.js           # original JS worklet (kept as fallback)
-│   ├── dsp-processor-wasm.js      # NEW: WASM-backed worklet (drop-in)
-│   ├── iem-core.js                # NEW: main-thread WASM bridge (window.IEMCore)
-│   ├── wasm/iem_core.wasm         # NEW: compiled Rust core (63 KB)
-│   └── data.zip                   # measurement DB (see "Local fork" below)
+│   ├── dsp-processor-wasm.js      # WASM-backed worklet (drop-in)
+│   ├── iem-core.js                # main-thread WASM bridge (window.IEMCore)
+│   └── wasm/iem_core.wasm         # compiled Rust core (~64 KB)
 ├── rust/
 │   ├── Cargo.toml                 # workspace
 │   ├── iem-core/                  # the DSP core (native + wasm)
-│   ├── iem-utils/                 # manifest generator + curve converter
+│   │   ├── src/                   # biquad, engine, magnitude, curves, autoeq
+│   │   ├── tests/                 # core test suite
+│   │   └── examples/              # bench.rs (perf), dump.rs (bit-exactness)
+│   ├── iem-utils/                 # manifest generator, curve converter, EQ exporter
 │   ├── src-tauri/                 # Tauri backend (commands wrap iem-core/-utils)
-│   ├── build-wasm.sh / .ps1       # rebuild wasm into app-files/wasm/
+│   └── build-wasm.sh / .ps1       # rebuild wasm into app-files/wasm/
+├── tools/                         # build.ps1, Create-Shortcut.ps1
+├── install.ps1                    # optional checksum-verified installer
+├── .github/workflows/             # ci.yml, release.yml
 ├── main.js, package.json          # original Electron shell (still works)
+├── CHANGELOG.md  CREDITS.md  LICENSE  README-original.md
 └── RUST-PORT.md                   # this file
 ```
 
@@ -232,7 +281,7 @@ checksums. This fork replaces that with two workflows:
 ### `ci.yml` — on every push / PR
 * **`test`** job runs on **Ubuntu, macOS and Windows**: `cargo fmt --check`,
   `cargo clippy`, the full Rust test suite (`cargo test -p iem-core -p iem-utils`,
-  29 tests), a `wasm32` build, and a check that the WASM module exports the
+  30 tests), a `wasm32` build, and a check that the WASM module exports the
   expected symbols.
 * **`utilities`** job smoke-tests the utility binaries end-to-end (manifest
   generator round-trips a tiny library; curve converter averages an L/R pair).
@@ -257,7 +306,7 @@ git push origin v1.0.1
 
 ### Test suite
 
-29 Rust tests cover: biquad transparency at 0 dB, center-frequency gain,
+30 Rust tests cover: biquad transparency at 0 dB, center-frequency gain,
 low-pass roll-off, coefficient finiteness, the faithful-vs-RBJ high-shelf
 variants, spline knot interpolation, Gaussian-smoothing of a constant, log-grid
 endpoints, normalization alignment, curve averaging stability, AutoEQ zero/

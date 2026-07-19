@@ -84,6 +84,19 @@ pub extern "C" fn biquad_magnitude(ftype: i32, f: f64, f0: f64, q: f64, g: f64, 
     magnitude::get_biquad_magnitude(FilterType::from_i32(ftype), f, f0, q, g, fs)
 }
 
+/// Bug-for-bug original plotting magnitude (legacy high-shelf sign).
+#[no_mangle]
+pub extern "C" fn biquad_magnitude_legacy(
+    ftype: i32,
+    f: f64,
+    f0: f64,
+    q: f64,
+    g: f64,
+    fs: f64,
+) -> f64 {
+    magnitude::get_biquad_magnitude_legacy(FilterType::from_i32(ftype), f, f0, q, g, fs)
+}
+
 /// Combined chain response in dB: for each target frequency, sum of
 /// `20*log10(|H_b|)` across all bands. `bands` is a flat array of
 /// `[type, f0, q, g]` repeated `n_bands` times (type stored as f64).

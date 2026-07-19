@@ -266,6 +266,27 @@ impl Biquad {
         y
     }
 
+    /// Process a whole block for both channels.
+    ///
+    /// L and R are interleaved per sample (L then R for sample i) which is
+    /// exactly the order the original per-sample chain used, so results are
+    /// bit-identical - but the per-filter bypass check and call overhead now
+    /// happen once per block instead of once per sample.
+    #[inline]
+    pub fn process_block(
+        &mut self,
+        l: &mut [f64],
+        r: &mut [f64],
+        smoothing_factor: f64,
+        sample_rate: f64,
+    ) {
+        debug_assert_eq!(l.len(), r.len());
+        for i in 0..l.len() {
+            l[i] = self.process_sample_l(l[i], smoothing_factor, sample_rate);
+            r[i] = self.process_sample_r(r[i]);
+        }
+    }
+
     #[inline]
     pub fn process_sample_r(&mut self, x: f64) -> f64 {
         if !self.s1_r.is_finite() || !self.s2_r.is_finite() {

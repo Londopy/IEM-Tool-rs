@@ -81,6 +81,14 @@ algorithms, correctness was verified against the original JavaScript (see
 - `dsp-processor-wasm.js` — WASM-backed AudioWorklet (drop-in for `dsp-processor.js`).
 - Two small, flag-gated, non-breaking hooks in `index.html`.
 
+### DSP work beyond the port
+- Real-time engine optimized to skip inactive filters (up to ~14.8x faster when
+  idle, ~1.6x with a typical 10-band setup, unchanged at full load), verified
+  bit-identical to the original output.
+- Plotted frequency response corrected to agree with the audio path for
+  high-shelf filters, with the original curve retained as a legacy function.
+- Zero-dependency benchmark and output-fingerprint examples for the core.
+
 ### Quality & delivery
 - **Test suite** — 20 Rust tests (`rust/iem-core/tests/`, `rust/iem-utils/tests/`).
 - **CI** (`.github/workflows/ci.yml`) — fmt, clippy, tests, WASM build on

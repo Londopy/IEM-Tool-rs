@@ -62,9 +62,10 @@ fn design_coeffs_are_finite() {
 }
 
 #[test]
-fn highshelf_rbj_variant_differs_from_faithful() {
-    // The corrected RBJ high-shelf should differ from the faithful (buggy) one.
-    let faithful = iem_core::magnitude::get_biquad_magnitude(
+fn legacy_and_corrected_highshelf_differ() {
+    // The default is now the corrected RBJ high-shelf (matches the audio path);
+    // the legacy variant reproduces the original plotting bug.
+    let legacy = iem_core::magnitude::get_biquad_magnitude_legacy(
         FilterType::HighShelf,
         8000.0,
         6000.0,
@@ -72,7 +73,7 @@ fn highshelf_rbj_variant_differs_from_faithful() {
         6.0,
         FS,
     );
-    let rbj = iem_core::magnitude::get_biquad_magnitude_rbj(
+    let corrected = iem_core::magnitude::get_biquad_magnitude(
         FilterType::HighShelf,
         8000.0,
         6000.0,
@@ -80,9 +81,36 @@ fn highshelf_rbj_variant_differs_from_faithful() {
         6.0,
         FS,
     );
-    assert!((faithful - rbj).abs() > 1e-6, "variants should differ");
+    assert!(
+        (legacy - corrected).abs() > 1e-6,
+        "legacy and corrected high-shelf should differ (legacy={legacy}, corrected={corrected})"
+    );
 }
 
+#[test]
+fn default_magnitude_matches_audio_path_for_highshelf() {
+    // The plotted response should agree with what the engine actually renders.
+    // Compare the analytic magnitude against the engine's own designed
+    // coefficients evaluated on the unit circle.
+    let (f0, q, gain) = (6000.0, 0.707, 5.0);
+    let c = iem_core::biquad::design(FilterType::HighShelf, f0, gain, q, FS);
+    for &f in &[100.0, 1000.0, 6000.0, 15000.0] {
+        let w = 2.0 * std::f64::consts::PI * f / FS;
+        let (cw, sw) = (w.cos(), w.sin());
+        let (c2w, s2w) = (cw * cw - sw * sw, 2.0 * sw * cw);
+        let nr = c.b0 + c.b1 * cw + c.b2 * c2w;
+        let ni = -(c.b1 * sw + c.b2 * s2w);
+        let dr = 1.0 + c.a1 * cw + c.a2 * c2w;
+        let di = -(c.a1 * sw + c.a2 * s2w);
+        let from_coeffs = ((nr * nr + ni * ni) / (dr * dr + di * di)).sqrt();
+        let plotted =
+            iem_core::magnitude::get_biquad_magnitude(FilterType::HighShelf, f, f0, q, gain, FS);
+        assert!(
+            (from_coeffs - plotted).abs() < 1e-9,
+            "plot vs audio mismatch at {f} Hz: {from_coeffs} vs {plotted}"
+        );
+    }
+}
 #[test]
 fn spline_passes_through_knots() {
     let pts = vec![(20.0, 70.0), (200.0, 75.0), (2000.0, 72.0), (20000.0, 68.0)];

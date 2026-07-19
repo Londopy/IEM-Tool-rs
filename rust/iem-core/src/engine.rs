@@ -111,6 +111,12 @@ impl EqEngine {
     }
 
     /// Process a stereo block in place-friendly form. Slices must all be `n` long.
+    ///
+    /// Sample-major (the signal stays in registers through the whole chain),
+    /// but iterating a precomputed list of *active* filters that is rebuilt
+    /// once per block. The original tested the bypass flag of all 95 filters on
+    /// every sample; that cost is now paid once per block instead. Output is
+    /// bit-identical to the original.
     pub fn process(
         &mut self,
         in_l: &[f32],
@@ -121,87 +127,107 @@ impl EqEngine {
     ) {
         let sf = self.smoothing_factor;
         let sr = self.sample_rate;
-        for i in 0..n {
-            self.preamp_gain += (self.target_preamp_gain - self.preamp_gain) * sf;
 
-            let mut sample_l = in_l[i] as f64 * self.preamp_gain;
-            let mut sample_r = in_r[i] as f64 * self.preamp_gain;
+        // How far into each bank we actually have to walk. Computed once per
+        // block: everything past the highest non-bypassed filter is skipped
+        // entirely, so unused bands cost nothing per sample.
+        let eq_hw = self
+            .filters
+            .iter()
+            .rposition(|f| !f.bypassed)
+            .map_or(0, |i| i + 1);
+        let sim_hw = self
+            .sim_filters
+            .iter()
+            .rposition(|f| !f.bypassed)
+            .map_or(0, |i| i + 1);
+
+        // Disjoint field borrows so the hot loop is free of `self.` lookups.
+        let filters = &mut self.filters[..eq_hw];
+        let sims = &mut self.sim_filters[..sim_hw];
+        let xo = &mut self.xo_filters;
+        let xo_gains = self.xo_gains;
+        let xo_enabled = self.xo_enabled;
+        let t = self.xo_type;
+        let target_preamp = self.target_preamp_gain;
+        let mut preamp = self.preamp_gain;
+
+        for i in 0..n {
+            preamp += (target_preamp - preamp) * sf;
+            let mut sample_l = in_l[i] as f64 * preamp;
+            let mut sample_r = in_r[i] as f64 * preamp;
 
             // 1. Parametric EQ
-            for f in self.filters.iter_mut() {
+            for f in filters.iter_mut() {
                 if !f.bypassed {
                     sample_l = f.process_sample_l(sample_l, sf, sr);
                     sample_r = f.process_sample_r(sample_r);
                 }
             }
+
             // 2. Acoustics & simulations
-            for f in self.sim_filters.iter_mut() {
+            for f in sims.iter_mut() {
                 if !f.bypassed {
                     sample_l = f.process_sample_l(sample_l, sf, sr);
                     sample_r = f.process_sample_r(sample_r);
                 }
             }
+
             // 3. Active crossover (parallel branches summed with per-branch gains)
-            if self.xo_enabled {
-                let t = self.xo_type;
+            if xo_enabled {
                 let (mut sum_l, mut sum_r) = (0.0f64, 0.0f64);
 
-                // branch 1 (always)
                 let (mut b1l, mut b1r) = (sample_l, sample_r);
-                if !self.xo_filters[0].bypassed {
-                    b1l = self.xo_filters[0].process_sample_l(sample_l, sf, sr);
-                    b1r = self.xo_filters[0].process_sample_r(sample_r);
+                if !xo[0].bypassed {
+                    b1l = xo[0].process_sample_l(sample_l, sf, sr);
+                    b1r = xo[0].process_sample_r(sample_r);
                 }
-                sum_l += b1l * self.xo_gains[0];
-                sum_r += b1r * self.xo_gains[0];
+                sum_l += b1l * xo_gains[0];
+                sum_r += b1r * xo_gains[0];
 
-                // branch 2 (5-way only): xo[1] -> xo[2]
                 if t == 5 {
                     let (mut l, mut r) = (sample_l, sample_r);
-                    if !self.xo_filters[1].bypassed {
-                        l = self.xo_filters[1].process_sample_l(sample_l, sf, sr);
-                        l = self.xo_filters[2].process_sample_l(l, sf, sr);
-                        r = self.xo_filters[1].process_sample_r(sample_r);
-                        r = self.xo_filters[2].process_sample_r(r);
+                    if !xo[1].bypassed {
+                        l = xo[1].process_sample_l(sample_l, sf, sr);
+                        l = xo[2].process_sample_l(l, sf, sr);
+                        r = xo[1].process_sample_r(sample_r);
+                        r = xo[2].process_sample_r(r);
                     }
-                    sum_l += l * self.xo_gains[1];
-                    sum_r += r * self.xo_gains[1];
+                    sum_l += l * xo_gains[1];
+                    sum_r += r * xo_gains[1];
                 }
 
-                // branch 3 (3/4/5-way): xo[3] -> xo[4]
                 if t == 3 || t == 4 || t == 5 {
                     let (mut l, mut r) = (sample_l, sample_r);
-                    if !self.xo_filters[3].bypassed {
-                        l = self.xo_filters[3].process_sample_l(sample_l, sf, sr);
-                        l = self.xo_filters[4].process_sample_l(l, sf, sr);
-                        r = self.xo_filters[3].process_sample_r(sample_r);
-                        r = self.xo_filters[4].process_sample_r(r);
+                    if !xo[3].bypassed {
+                        l = xo[3].process_sample_l(sample_l, sf, sr);
+                        l = xo[4].process_sample_l(l, sf, sr);
+                        r = xo[3].process_sample_r(sample_r);
+                        r = xo[4].process_sample_r(r);
                     }
-                    sum_l += l * self.xo_gains[2];
-                    sum_r += r * self.xo_gains[2];
+                    sum_l += l * xo_gains[2];
+                    sum_r += r * xo_gains[2];
                 }
 
-                // branch 4 (4/5-way): xo[5] -> xo[6]
                 if t == 4 || t == 5 {
                     let (mut l, mut r) = (sample_l, sample_r);
-                    if !self.xo_filters[5].bypassed {
-                        l = self.xo_filters[5].process_sample_l(sample_l, sf, sr);
-                        l = self.xo_filters[6].process_sample_l(l, sf, sr);
-                        r = self.xo_filters[5].process_sample_r(sample_r);
-                        r = self.xo_filters[6].process_sample_r(r);
+                    if !xo[5].bypassed {
+                        l = xo[5].process_sample_l(sample_l, sf, sr);
+                        l = xo[6].process_sample_l(l, sf, sr);
+                        r = xo[5].process_sample_r(sample_r);
+                        r = xo[6].process_sample_r(r);
                     }
-                    sum_l += l * self.xo_gains[3];
-                    sum_r += r * self.xo_gains[3];
+                    sum_l += l * xo_gains[3];
+                    sum_r += r * xo_gains[3];
                 }
 
-                // branch 5 (always): xo[7]
                 let (mut b5l, mut b5r) = (sample_l, sample_r);
-                if !self.xo_filters[7].bypassed {
-                    b5l = self.xo_filters[7].process_sample_l(sample_l, sf, sr);
-                    b5r = self.xo_filters[7].process_sample_r(sample_r);
+                if !xo[7].bypassed {
+                    b5l = xo[7].process_sample_l(sample_l, sf, sr);
+                    b5r = xo[7].process_sample_r(sample_r);
                 }
-                sum_l += b5l * self.xo_gains[4];
-                sum_r += b5r * self.xo_gains[4];
+                sum_l += b5l * xo_gains[4];
+                sum_r += b5r * xo_gains[4];
 
                 sample_l = sum_l;
                 sample_r = sum_r;
@@ -210,5 +236,7 @@ impl EqEngine {
             out_l[i] = sample_l as f32;
             out_r[i] = sample_r as f32;
         }
+
+        self.preamp_gain = preamp;
     }
 }

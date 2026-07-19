@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-07-19
+
+DSP engine improvements: a faster real-time path and a plotting fix, with the
+audio output unchanged bit-for-bit.
+
+### Added
+- Benchmark and output-fingerprint examples for the DSP core
+  (`cargo run --release -p iem-core --example bench` / `--example dump`).
+- `get_biquad_magnitude_legacy` (and the `biquad_magnitude_legacy` export) which
+  reproduces the original plotting routine bug-for-bug, in case the old curve is
+  ever needed.
+
+### Changed
+- **Plotted frequency response now matches the audio path.** The default
+  magnitude function uses the corrected RBJ high-shelf; previously the plot
+  disagreed with what the engine actually rendered for high-shelf filters.
+- **Real-time engine is substantially faster when few bands are active.** The
+  processing loop now walks only up to the highest active filter instead of
+  testing all 95 filters on every sample: ~14.8x faster with nothing engaged,
+  ~1.6x faster with 10 bands, and unchanged at full load. Output is bit-identical.
+
 ## [1.0.0] - 2026-07-19
 
 First release of the Rust port, built on the IEM Tool frontend by MyLittlePrimordia.
@@ -49,5 +70,6 @@ First release of the Rust port, built on the IEM Tool frontend by MyLittlePrimor
   is still reproduced faithfully in `get_biquad_magnitude` for plot parity, with
   `get_biquad_magnitude_rbj` available as the corrected variant.
 
-[Unreleased]: https://github.com/Londopy/IEM-Tool-rs/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/Londopy/IEM-Tool-rs/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/Londopy/IEM-Tool-rs/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/Londopy/IEM-Tool-rs/releases/tag/v1.0.0
